@@ -1,0 +1,51 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+*.pydistutils.cfg
+
+# Django
+*.log
+*.pot
+*.py[co]
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Virtualenv
+venv/
+env/
+ENV/
+.venv/
+.venv.bak/
+
+# Django migrations
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# Environment variables
+.env
+.env.*
+
+# VSCode and other IDE settings
+.vscode/
+.idea/
+
+# Docker
+*.pid
+docker-compose.yml.override
+docker-compose.override.yml
+__MACOSX
+Dockerfile
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/

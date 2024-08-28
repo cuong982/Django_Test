@@ -1,0 +1,37 @@
+# Ignore Python bytecode and cache files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Ignore virtual environments
+venv/
+env/
+ENV/
+.venv/
+.venv.bak/
+
+# Ignore Django-specific directories
+static/
+media/
+
+# Ignore local environment files
+.env
+.env.*
+
+# Ignore Git repository
+.git
+.gitignore
+
+# Ignore Docker-related files
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+
+# Ignore IDE and OS-generated files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
