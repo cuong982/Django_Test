@@ -33,6 +33,13 @@ services:
     networks:
       - django-test-nw
 
+  adminer:
+    image: adminer
+    ports:
+      - "5555:8080"
+    networks:
+      - django-test-nw
+
 volumes:
   postgres_data:
 

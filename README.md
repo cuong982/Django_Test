@@ -121,3 +121,50 @@ class Command(BaseCommand):
 - **Asynchronous Execution**: We could offload this task to an asynchronous job queue using something like Celery, which would allow the task to run in the background and report progress more effectively.
 
 This Django management command provides an efficient and safe way to regenerate UUIDs for 1 million records in the `Ticket` table while ensuring the process is memory-efficient, can resume from interruptions, and gives the user real-time progress updates.
+
+-------
+
+Here’s a more detailed and clearer `README.md` that provides step-by-step instructions on how to run the project:
+
+---
+
+# How to Run This Project
+
+Follow the steps below to set up and run the project, including how to create 1 million ticket records.
+
+### 1. Build and Start the Project using Docker Compose
+
+To build the Docker containers and start the project, run the following command:
+
+```sh
+docker-compose up --build -d
+```
+
+This command will:
+- Build the Docker images for the project.
+- Start the containers in detached mode (`-d` means detached, so it will run in the background).
+
+### 2. Create 1 Million Ticket Records
+
+Once the containers are up and running, you need to generate the 1 million ticket records. Follow these steps:
+
+1. **Open a shell in the running `web` container**:
+   - This will give you access to the Django environment inside the container.
+
+   Run the following command to open a bash session inside the `web` container:
+
+   ```sh
+   docker-compose exec web bash
+   ```
+
+2. **Run the Django management command to create tickets**:
+   - Inside the `web` container, run the following Django command to generate 1 million ticket records. You can adjust the `--batch-size` parameter if needed (in this example, it is set to 10,000 records per batch).
+
+   ```sh
+   python manage.py create_tickets --batch-size 10000
+   ```
+
+   This will:
+   - Create the records in batches of 10,000.
+   - Output the progress as the tickets are created.
+

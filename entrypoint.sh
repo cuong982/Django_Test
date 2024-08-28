@@ -1,6 +1,8 @@
 #!/bin/sh
 
-if [ "$DATABASE" = "postgres" ]
+echo "Running entrypoint.sh script..."
+
+if [ "$DB_NAME" = "postgres" ]
 then
     echo "Waiting for PostgreSQL..."
 
@@ -10,5 +12,9 @@ then
 
     echo "PostgreSQL started"
 fi
+
+# Run Django migrations to ensure the database schema is up-to-date
+python manage.py makemigrations
+python manage.py migrate
 
 exec "$@"

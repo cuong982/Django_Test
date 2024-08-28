@@ -41,7 +41,6 @@ ENV/
 docker-compose.yml.override
 docker-compose.override.yml
 __MACOSX
-Dockerfile
 
 # OS generated files
 .DS_Store
