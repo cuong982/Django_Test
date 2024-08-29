@@ -168,3 +168,14 @@ Once the containers are up and running, you need to generate the 1 million ticke
    - Create the records in batches of 10,000.
    - Output the progress as the tickets are created.
 
+### 3. Generate token again for 1 Million Ticket Records
+
+```sh
+python manage.py protect_tickets --batch-size 10000
+```
+![Screenshot 2024-08-28 at 23.46.27.png](document/protect_tickets/result-1.png)
+![Screenshot 2024-08-28 at 23.46.38.png](document/protect_tickets/result-2.png)
+
+```sh
+python manage.py protect_tickets_improve_v1 --batch-size 1000
+```
