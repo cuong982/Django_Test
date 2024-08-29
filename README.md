@@ -100,6 +100,8 @@ Once the containers are up and running, you need to generate the 1 million ticke
 ### 3. Generate Tokens Again for 1 Million Ticket Records
 
 You will now regenerate the UUID tokens for the 1 million ticket records using two different commands: `protect_tickets` and `protect_tickets_improve_v1`. The results are compared based on different batch sizes.
+Please update `last_process_id.txt` file each time complete run command `0, 0,0` to run other command
+![Update last_process_id.txt again](document/last_process_id.png)
 
 #### 3.1 Using `protect_tickets` Command
 
@@ -119,6 +121,7 @@ This will:
 - ![Result 2](document/protect_tickets/result-2.png)
 
 #### 3.2 Using `protect_tickets_improve_v1` Command
+Improve with `bulk_update`
 
 Run the following commands with different batch sizes to compare the performance:
 
@@ -161,20 +164,32 @@ Run the following commands with different batch sizes to compare the performance
   ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 500
   ```
+  
+#### 3.2 Using `protect_tickets_improve_v2` Command
+Improve with `bulk_update` and run concurrency multiple batch process
 
 ### 4. Comparison of Results
 
 The table below summarizes the results of regenerating UUID tokens using different commands and batch sizes:
 
-| Command                        | Batch Size | Time Taken (seconds) | Observations                                              |
-|--------------------------------|------------|----------------------|-----------------------------------------------------------|
-| `protect_tickets`              | 10,000     | 296 seconds          | Standard method: handle each record                       |
-| `protect_tickets_improve_v1`   | 10,000     | 372.79 seconds       | Improved method with `bulk_update`                        |
-| `protect_tickets_improve_v1`   | 5,000      | 111.13 seconds       | Improved method with `bulk_update` and smaller batch size |
-| `protect_tickets_improve_v1`   | 3,000      | 98.40 seconds        | Further optimized for smaller batches                     |
-| `protect_tickets_improve_v1`   | 2,000      | 104.19 seconds       | Balancing speed and resource usage                        |
-| `protect_tickets_improve_v1`   | 1,000      | 123.75 seconds       | Slower, but less resource-intensive                       |
-| `protect_tickets_improve_v1`   | 500        | 135.13 seconds       | Very small batch size, might be the slowest               |
+| Command                      | Batch Size   | Time Taken (seconds)   | Observations                                                |
+|------------------------------|--------------|------------------------|-------------------------------------------------------------|
+| `protect_tickets`            | 10,000       | 296 seconds            | Standard method: handle each record                         |
+|------------------------------| ------------ | ---------------------- |-------------------------------------------------------------|
+| `protect_tickets_improve_v1` | 10,000       | 372.79 seconds         | Improved method with `bulk_update`                          |
+| `protect_tickets_improve_v1` | 5,000        | 111.13 seconds         | Improved method with `bulk_update` and smaller batch size   |
+| `protect_tickets_improve_v1` | 3,000        | 98.40 seconds          | Further optimized for smaller batches                       |
+| `protect_tickets_improve_v1` | 3,000        | 110.53 seconds         | Add index in model                                          |
+| `protect_tickets_improve_v1` | 2,000        | 104.19 seconds         | Balancing speed and resource usage                          |
+| `protect_tickets_improve_v1` | 1,000        | 123.75 seconds         | Slower, but less resource-intensive                         |
+| `protect_tickets_improve_v1` | 500          | 135.13 seconds         | Very small batch size, might be the slowest                 |
+|------------------------------| ------------ | ---------------------- | ----------------------------------------------------------- |
+| `protect_tickets_improve_v2` | 1000         | 61.35 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
+| `protect_tickets_improve_v2` | 2000         | 43.22 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
+| `protect_tickets_improve_v2` | 3000         | 40.13 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
+| `protect_tickets_improve_v2` | 5000         | 42.11 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
+| `protect_tickets_improve_v2` | 10000        | the system hangs       | Improved method with `bulk_update` and run Asynchronous Execution                 |
+
 
 ---
 
@@ -184,6 +199,8 @@ The table below summarizes the results of regenerating UUID tokens using differe
 - **Large Batch Size (10,000)**: When using a large batch size, you might be hitting the I/O limits of your database. The larger the batch, the more data the database needs to write at once, potentially causing I/O bottlenecks. This could explain why the time taken increased with a larger batch size despite using `bulk_update`.
   
 - **Smaller Batch Sizes (3,000 - 5,000)**: These seem to provide a better balance because they likely stay within the database’s optimal performance window, avoiding excessive I/O bottlenecks while still benefiting from the efficiency of batch processing.
+
+- **Small Batch Sizes 3000 with index)**: While indexes can speed up read operations, they can slow down write operations (inserts, updates, deletes) because the index itself needs to be updated whenever the data in the indexed columns changes. Indexes take up additional disk space. The more indexes you have, the more storage is required.
 
 - **Very Small Batch Sizes (500 - 1,000)**: These batches might reduce immediate I/O strain, but they increase the number of transactions and overhead, as each batch still requires separate processing. This could lead to more time being spent on transaction management and less on actual data processing.
 

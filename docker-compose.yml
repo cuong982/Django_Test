@@ -33,6 +33,32 @@ services:
     networks:
       - django-test-nw
 
+  redis:
+    image: redis:6.2-alpine
+    networks:
+      - django-test-nw
+    ports:
+      - "6371:6379"
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    command: bash -c "celery -A batch_process worker --autoscale=25,3 --loglevel=info --statedb=/app/worker.state --logfile=logs/celery.log"
+    volumes:
+      - ./:/app
+    environment:
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+    depends_on:
+      - web
+      - redis
+    networks:
+      - django-test-nw
+
   adminer:
     image: adminer
     ports:
