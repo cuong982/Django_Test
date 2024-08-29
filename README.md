@@ -17,96 +17,21 @@ The solution should:
 
 ### 2. Database Model
 - Let's assume the `Ticket` table has a column called `token` that contains the UUID values, and our goal is to regenerate these UUIDs.
-- We can use an additional column (e.g., `processed`) to mark rows that have already been updated, but in this case, we'll use a simpler approach by saving the ID of the last processed record.
+- We can use an additional column (e.g., `processed` or `updated`) to mark rows that have already been updated, but in this case, we'll use a simpler approach by saving the ID of the last processed record.
 
 ### 3. Proposed Solution
+Command in management:
+- `protect_tickets` in myapp/management/commands/protect_tickets.py. Update UUID of each records
+- `protect_tickets_improve_v1` in in myapp/management/commands/protect_tickets_improve_v1.py. Use `bulk_update` base on batch-size
 
-```python
-import time
-import uuid
-from django.core.management.base import BaseCommand
-from django.db import transaction
-from myapp.models import Ticket
 
-BATCH_SIZE = 1000  # Number of records to process in each batch
-
-class Command(BaseCommand):
-    help = 'Regenerates UUIDs for all Ticket records and updates them in batches'
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            help='Specify the size of batches to process at a time',
-        )
-
-    def handle(self, *args, **kwargs):
-        batch_size = kwargs.get('batch_size', BATCH_SIZE)
-
-        # Get the total number of records to report progress
-        total_records = Ticket.objects.count()
-        self.stdout.write(f"Total tickets: {total_records}")
-        
-        # Use a checkpoint to resume from where we left off
-        last_processed_id = self.get_last_processed_ticket_id()
-        
-        start_time = time.time()
-
-        while True:
-            # Get a batch of records starting from last_processed_id
-            tickets = Ticket.objects.filter(id__gt=last_processed_id).order_by('id')[:batch_size]
-
-            if not tickets.exists():
-                self.stdout.write(self.style.SUCCESS('All tickets have been processed.'))
-                break
-
-            # Process the current batch
-            with transaction.atomic():  # Ensure data integrity
-                for ticket in tickets:
-                    ticket.token = uuid.uuid4()
-                    ticket.save()
-
-                last_ticket = tickets.last()
-                last_processed_id = last_ticket.id
-                self.save_last_processed_ticket_id(last_processed_id)
-
-            # Calculate progress
-            processed_records = Ticket.objects.filter(id__lte=last_processed_id).count()
-            progress = (processed_records / total_records) * 100
-            elapsed_time = time.time() - start_time
-            estimated_total_time = (elapsed_time / processed_records) * total_records
-            remaining_time = estimated_total_time - elapsed_time
-
-            self.stdout.write(
-                f"Processed {processed_records}/{total_records} tickets "
-                f"({progress:.2f}% complete). "
-                f"Estimated remaining time: {remaining_time:.2f} seconds."
-            )
-
-    def get_last_processed_ticket_id(self):
-        """
-        Returns the ID of the last processed record from the checkpoint.
-        """
-        # Assume we're using a simple file-based checkpoint system
-        try:
-            with open('last_processed_id.txt', 'r') as f:
-                return int(f.read().strip())
-        except FileNotFoundError:
-            return 0
-
-    def save_last_processed_ticket_id(self, last_processed_id):
-        """
-        Saves the ID of the last processed record so we can resume later.
-        """
-        with open('last_processed_id.txt', 'w') as f:
-            f.write(str(last_processed_id))
-```
+Here's the updated explanation in `README.md` to reflect the changes in the code:
 
 ### 4. Explanation of Key Parts
-- **Batch Processing**: This code processes 1,000 records (or the user-specified number) at a time to avoid overloading memory by not loading the entire dataset at once.
-- **UUID Regeneration**: For each record, we generate a new UUID using `uuid.uuid4()` and save it back to the database.
-- **Checkpoint**: A simple checkpoint mechanism stores the ID of the last processed record in a file called `last_processed_id.txt`. This allows the script to resume from where it left off in case of an interruption.
-- **Progress Updates**: The script provides real-time updates to the user about how much has been processed and estimates the remaining time based on the current progress.
+- **Batch Processing**: This code processes records base on batch-size at a time to avoid overloading memory by not loading the entire dataset at once.
+- **UUID Regeneration**: For each record, a new UUID is generated using `uuid.uuid4()` and saved back to the database.
+- **Checkpoint**: A checkpoint mechanism stores both the ID of the last processed record and the total elapsed time in a file called `last_processed_id.txt`. This ensures that if the script is interrupted, it can resume from where it left off, accurately accounting for the time spent before the interruption.
+- **Progress Updates**: The script provides real-time updates to the user about how many records have been processed, including an estimate of the remaining time. The remaining time calculation is adjusted to account for any previous elapsed time, ensuring accuracy even after an interruption and resumption of the script.
 
 ### 5. Alternative Approaches and Trade-offs
 
@@ -125,6 +50,10 @@ This Django management command provides an efficient and safe way to regenerate 
 -------
 
 Here’s a more detailed and clearer `README.md` that provides step-by-step instructions on how to run the project:
+
+---
+
+Here’s the updated `README.md` with the comparison table included, combining sections 3 and 4:
 
 ---
 
@@ -168,14 +97,93 @@ Once the containers are up and running, you need to generate the 1 million ticke
    - Create the records in batches of 10,000.
    - Output the progress as the tickets are created.
 
-### 3. Generate token again for 1 Million Ticket Records
+### 3. Generate Tokens Again for 1 Million Ticket Records
+
+You will now regenerate the UUID tokens for the 1 million ticket records using two different commands: `protect_tickets` and `protect_tickets_improve_v1`. The results are compared based on different batch sizes.
+
+#### 3.1 Using `protect_tickets` Command
+
+Run the following command with a batch size of 10,000:
 
 ```sh
 python manage.py protect_tickets --batch-size 10000
 ```
-![Screenshot 2024-08-28 at 23.46.27.png](document/protect_tickets/result-1.png)
-![Screenshot 2024-08-28 at 23.46.38.png](document/protect_tickets/result-2.png)
 
-```sh
-python manage.py protect_tickets_improve_v1 --batch-size 1000
-```
+This will:
+- Regenerate the UUID tokens for all ticket records using the original method.
+- The progress and total time taken will be displayed.
+
+**Result Screenshots:**
+
+- ![Result 1](document/protect_tickets/result-1.png)
+- ![Result 2](document/protect_tickets/result-2.png)
+
+#### 3.2 Using `protect_tickets_improve_v1` Command
+
+Run the following commands with different batch sizes to compare the performance:
+
+- **Batch Size: 10,000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 10000
+  ```
+   Result Screenshots:
+
+- ![Result 1](document/protect_tickets_improve_v1/batch_size_10000.png)
+- ![Result 2](document/protect_tickets_improve_v1/batch_size_10000_2.png)
+
+- **Batch Size: 5,000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 5000
+  ```
+
+- **Batch Size: 3,000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 3000
+  ```
+
+- **Batch Size: 2,000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 2000
+  ```
+
+- **Batch Size: 1,000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 1000
+  ```
+
+- **Batch Size: 500**
+
+  ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size 500
+  ```
+
+### 4. Comparison of Results
+
+The table below summarizes the results of regenerating UUID tokens using different commands and batch sizes:
+
+| Command                        | Batch Size | Time Taken (seconds) | Observations                                              |
+|--------------------------------|------------|----------------------|-----------------------------------------------------------|
+| `protect_tickets`              | 10,000     | 296 seconds          | Standard method: handle each record                       |
+| `protect_tickets_improve_v1`   | 10,000     | 372.79 seconds       | Improved method with `bulk_update`                        |
+| `protect_tickets_improve_v1`   | 5,000      | 111.13 seconds       | Improved method with `bulk_update` and smaller batch size |
+| `protect_tickets_improve_v1`   | 3,000      | 98.40 seconds        | Further optimized for smaller batches                     |
+| `protect_tickets_improve_v1`   | 2,000      | 104.19 seconds       | Balancing speed and resource usage                        |
+| `protect_tickets_improve_v1`   | 1,000      | 123.75 seconds       | Slower, but less resource-intensive                       |
+| `protect_tickets_improve_v1`   | 500        | 135.13 seconds       | Very small batch size, might be the slowest               |
+
+---
+
+### Specific to Observations:
+- **Standard Method (protect_tickets)**: The first row shows the time taken by the standard method, which processes each record individually. With a batch size of 10,000, it took 296 seconds. This method is straightforward but may not be optimized for handling large datasets efficiently.
+
+- **Large Batch Size (10,000)**: When using a large batch size, you might be hitting the I/O limits of your database. The larger the batch, the more data the database needs to write at once, potentially causing I/O bottlenecks. This could explain why the time taken increased with a larger batch size despite using `bulk_update`.
+  
+- **Smaller Batch Sizes (3,000 - 5,000)**: These seem to provide a better balance because they likely stay within the database’s optimal performance window, avoiding excessive I/O bottlenecks while still benefiting from the efficiency of batch processing.
+
+- **Very Small Batch Sizes (500 - 1,000)**: These batches might reduce immediate I/O strain, but they increase the number of transactions and overhead, as each batch still requires separate processing. This could lead to more time being spent on transaction management and less on actual data processing.
+
