@@ -23,6 +23,8 @@ The solution should:
 Command in management:
 - `protect_tickets` in myapp/management/commands/protect_tickets.py. Update UUID of each records
 - `protect_tickets_improve_v1` in in myapp/management/commands/protect_tickets_improve_v1.py. Use `bulk_update` base on batch-size
+- `protect_tickets_improve_v2` in in myapp/management/commands/protect_tickets_improve_v2.py. Use `bulk_update` base on batch-size and celery for Asynchronous Execution
+- `protect_tickets_improve_v3` in in myapp/management/commands/protect_tickets_improve_v3.py. Use `bulk_update` base on batch-size and celery for Asynchronous Execution and use Redis to save checkpoint (replace save in file)
 
 
 Here's the updated explanation in `README.md` to reflect the changes in the code:
@@ -49,13 +51,6 @@ This Django management command provides an efficient and safe way to regenerate 
 
 -------
 
-Here’s a more detailed and clearer `README.md` that provides step-by-step instructions on how to run the project:
-
----
-
-Here’s the updated `README.md` with the comparison table included, combining sections 3 and 4:
-
----
 
 # How to Run This Project
 
@@ -115,92 +110,96 @@ This will:
 - Regenerate the UUID tokens for all ticket records using the original method.
 - The progress and total time taken will be displayed.
 
-**Result Screenshots:**
+    Result Screenshots: Please see in folder: `document/protect_tickets`
 
-- ![Result 1](document/protect_tickets/result-1.png)
-- ![Result 2](document/protect_tickets/result-2.png)
 
 #### 3.2 Using `protect_tickets_improve_v1` Command
 Improve with `bulk_update`
 
 Run the following commands with different batch sizes to compare the performance:
 
-- **Batch Size: 10,000**
+- **Batch Size: 10,000**. Please update `last_process_id.txt` file each time complete run command `0, 0,0` to run other command
 
   ```sh
+  python manage.py protect_tickets_improve_v1 --batch-size <number of batch-size>
   python manage.py protect_tickets_improve_v1 --batch-size 10000
-  ```
-   Result Screenshots:
-
-- ![Result 1](document/protect_tickets_improve_v1/batch_size_10000.png)
-- ![Result 2](document/protect_tickets_improve_v1/batch_size_10000_2.png)
-
-- **Batch Size: 5,000**
-
-  ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 5000
-  ```
-
-- **Batch Size: 3,000**
-
-  ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 3000
-  ```
-
-- **Batch Size: 2,000**
-
-  ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 2000
-  ```
-
-- **Batch Size: 1,000**
-
-  ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 1000
-  ```
-
-- **Batch Size: 500**
-
-  ```sh
   python manage.py protect_tickets_improve_v1 --batch-size 500
   ```
+   Result Screenshots: Please see in folder: `document/protect_tickets_improve_v1`
+
   
 #### 3.2 Using `protect_tickets_improve_v2` Command
-Improve with `bulk_update` and run concurrency multiple batch process
+Improve with `bulk_update` and run with Asynchronous Execution via `celery task`.
+
+- **Batch Size: 5000, 3000, 2000, 1000, 500**. Please update `last_process_id.txt` file each time complete run command `0, 0,0` to run other command
+
+  ```sh
+  python manage.py protect_tickets_improve_v2 --batch-size <number of batch-size>
+  python manage.py protect_tickets_improve_v2 --batch-size 5000
+  python manage.py protect_tickets_improve_v2 --batch-size 3000
+  python manage.py protect_tickets_improve_v2 --batch-size 2000
+  python manage.py protect_tickets_improve_v2 --batch-size 1000
+  python manage.py protect_tickets_improve_v2 --batch-size 500
+  ```
+   Result Screenshots: Please see in folder: `document/protect_tickets_improve_v2`
+
+#### 3.3 Using `protect_tickets_improve_v3` Command
+Improve with `bulk_update` and run with Asynchronous Execution via `celery task` and `Redis` to save checkpoint
+
+- **Batch Size: 3000**
+
+  ```sh
+  python manage.py protect_tickets_improve_v2 --reset --batch-size <number of batch-size>
+  python manage.py protect_tickets_improve_v2 --reset --batch-size 3000
+  ```
+   Result Screenshots: Please see in folder: `document/protect_tickets_improve_v3`
 
 ### 4. Comparison of Results
-
+Factors such as CPU speed, number of cores, amount of RAM, disk type (SSD vs HDD), and overall system load can significantly impact the execution times and behavior of the commands.
 The table below summarizes the results of regenerating UUID tokens using different commands and batch sizes:
 
-| Command                      | Batch Size   | Time Taken (seconds)   | Observations                                                |
-|------------------------------|--------------|------------------------|-------------------------------------------------------------|
-| `protect_tickets`            | 10,000       | 296 seconds            | Standard method: handle each record                         |
-|------------------------------| ------------ | ---------------------- |-------------------------------------------------------------|
-| `protect_tickets_improve_v1` | 10,000       | 372.79 seconds         | Improved method with `bulk_update`                          |
-| `protect_tickets_improve_v1` | 5,000        | 111.13 seconds         | Improved method with `bulk_update` and smaller batch size   |
-| `protect_tickets_improve_v1` | 3,000        | 98.40 seconds          | Further optimized for smaller batches                       |
-| `protect_tickets_improve_v1` | 3,000        | 110.53 seconds         | Add index in model                                          |
-| `protect_tickets_improve_v1` | 2,000        | 104.19 seconds         | Balancing speed and resource usage                          |
-| `protect_tickets_improve_v1` | 1,000        | 123.75 seconds         | Slower, but less resource-intensive                         |
-| `protect_tickets_improve_v1` | 500          | 135.13 seconds         | Very small batch size, might be the slowest                 |
-|------------------------------| ------------ | ---------------------- | ----------------------------------------------------------- |
-| `protect_tickets_improve_v2` | 1000         | 61.35 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
-| `protect_tickets_improve_v2` | 2000         | 43.22 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
-| `protect_tickets_improve_v2` | 3000         | 40.13 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
-| `protect_tickets_improve_v2` | 5000         | 42.11 seconds          | Improved method with `bulk_update` and run Asynchronous Execution                 |
-| `protect_tickets_improve_v2` | 10000        | the system hangs       | Improved method with `bulk_update` and run Asynchronous Execution                 |
+| Command                        | Batch Size   | Time Taken (seconds)   | Observations                                                                                            | When to Use                                                                                                  |
+|--------------------------------|--------------|------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `protect_tickets`              | 10,000       | 296 seconds            | Standard method: handle each record individually. Suitable for simple cases but not optimized.          | Use when working with smaller datasets or when simplicity is more important than performance.                |
+| ------------------------------ | ------------ | ---------------------- | -------------------------------------------------------------                                           | -----------------------------------------------------------                                                  |
+| `protect_tickets_improve_v1`   | 10,000       | 372.79 seconds         | Improved with `bulk_update`. Large batch size may cause I/O bottlenecks, leading to slower times.       | Use when processing large datasets but beware of potential I/O limits on the database.                       |
+| `protect_tickets_improve_v1`   | 5,000        | 111.13 seconds         | Improved with `bulk_update` and smaller batch size. Balanced I/O and efficiency.                        | Use when seeking to balance performance with manageable I/O load on the database.                            |
+| `protect_tickets_improve_v1`   | 3,000        | 98.40 seconds          | Further optimized for smaller batches. Reduced I/O strain while maintaining efficiency.                 | Ideal for moderately large datasets where database performance needs careful balancing.                      |
+| `protect_tickets_improve_v1`   | 3,000        | 110.53 seconds         | With index in model. Indexes can slow down write operations slightly due to the need to update.         | Use when read performance is critical, but be cautious of slight write slowdowns.                            |
+| `protect_tickets_improve_v1`   | 2,000        | 104.19 seconds         | Balances speed and resource usage effectively. Suitable for databases with moderate capabilities.       | Use when database resources are moderate, balancing between I/O load and processing efficiency.              |
+| `protect_tickets_improve_v1`   | 1,000        | 123.75 seconds         | Slower, but less resource-intensive. Increased transaction overhead.                                    | Use when minimizing resource usage is a priority, despite slower overall performance.                        |
+| `protect_tickets_improve_v1`   | 500          | 135.13 seconds         | Very small batch size. Increased transaction overhead, leading to slower performance.                   | Use when system resources are extremely limited or when running on systems with significant I/O limitations. |
+| ------------------------------ | ------------ | ---------------------- | -----------------------------------------------------------                                             | -----------------------------------------------------------                                                  |
+| `protect_tickets_improve_v2`   | 1,000        | 61.35 seconds          | Improved with `bulk_update` and Asynchronous Execution. Fast with smaller batch sizes.                  | Use when you can benefit from asynchronous execution and need to process small batches efficiently.          |
+| `protect_tickets_improve_v2`   | 2,000        | 43.22 seconds          | Improved with `bulk_update` and Asynchronous Execution. Balanced speed and resource usage.              | Ideal when combining asynchronous processing with moderately large batches for faster results.               |
+| `protect_tickets_improve_v2`   | 3,000        | 40.13 seconds          | Improved with `bulk_update` and Asynchronous Execution. Optimal performance for most cases.             | Recommended for general use when maximum performance is needed, balancing batch size and async tasks.        |
+| `protect_tickets_improve_v2`   | 5,000        | 42.11 seconds          | Improved with `bulk_update` and Asynchronous Execution. Slight increase in time with larger batch size. | Use when slightly larger batches are manageable without causing significant delays or resource issues.       |
+| `protect_tickets_improve_v2`   | 10,000       | System hangs           | Improved with `bulk_update` and Asynchronous Execution. Large batch size causes system hang.            | Avoid using very large batch sizes with asynchronous execution to prevent system overload.                   |
+| ------------------------------ | ------------ | ---------------------- | -----------------------------------------------------------                                             | -----------------------------------------------------------                                                  |
+| `protect_tickets_improve_v3`   | 3,000        | 40.16 seconds          | Improved with `bulk_update`, Asynchronous Execution, and Redis to save checkpoint. Best performance.    | Use when high performance is required, and you need reliable checkpointing for large datasets.               |
 
+### Summary
 
----
+- **Standard Method (`protect_tickets`)**:
+  - **When to Use**: Use this method for smaller datasets or when the simplicity of implementation is a higher priority than performance. It is straightforward but not optimized for handling large datasets efficiently.
 
-### Specific to Observations:
-- **Standard Method (protect_tickets)**: The first row shows the time taken by the standard method, which processes each record individually. With a batch size of 10,000, it took 296 seconds. This method is straightforward but may not be optimized for handling large datasets efficiently.
+- **Large Batch Size (e.g., 10,000)**:
+  - **When to Avoid**: While large batch sizes might seem efficient, they can hit I/O limits, causing slowdowns or even causing the system to hang, especially with asynchronous execution. It's better to avoid very large batch sizes unless you are sure that your database and system can handle the load.
 
-- **Large Batch Size (10,000)**: When using a large batch size, you might be hitting the I/O limits of your database. The larger the batch, the more data the database needs to write at once, potentially causing I/O bottlenecks. This could explain why the time taken increased with a larger batch size despite using `bulk_update`.
-  
-- **Smaller Batch Sizes (3,000 - 5,000)**: These seem to provide a better balance because they likely stay within the database’s optimal performance window, avoiding excessive I/O bottlenecks while still benefiting from the efficiency of batch processing.
+- **Smaller Batch Sizes (e.g., 2,000 - 5,000)**:
+  - **When to Use**: These sizes strike a good balance between performance and resource usage. They avoid excessive I/O bottlenecks while still taking advantage of batch processing efficiencies.
 
-- **Small Batch Sizes 3000 with index)**: While indexes can speed up read operations, they can slow down write operations (inserts, updates, deletes) because the index itself needs to be updated whenever the data in the indexed columns changes. Indexes take up additional disk space. The more indexes you have, the more storage is required.
+- **Very Small Batch Sizes (e.g., 500 - 1,000)**:
+  - **When to Use**: Use when minimizing resource usage is crucial, such as on systems with limited I/O or memory. However, expect slower overall processing due to increased transaction overhead.
 
-- **Very Small Batch Sizes (500 - 1,000)**: These batches might reduce immediate I/O strain, but they increase the number of transactions and overhead, as each batch still requires separate processing. This could lead to more time being spent on transaction management and less on actual data processing.
+- **Asynchronous Execution (`protect_tickets_improve_v2`)**:
+  - **When to Use**: Best suited for scenarios where you need to process data efficiently with the ability to handle tasks concurrently. Works well with moderately sized batches (2,000 - 5,000).
+
+- **Redis for Checkpointing (`protect_tickets_improve_v3`)**:
+  - **When to Use**: Recommended when processing large datasets, where you need to ensure that progress is saved reliably. The use of Redis for checkpointing adds resilience and reliability to the process, especially in long-running tasks.
+
 
